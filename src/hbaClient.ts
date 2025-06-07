@@ -405,3 +405,5 @@ export class HBAClient {
             !metadata.boundAuthTokenExemptlist?.some((item) => url.includes(item.apiSite));
     }
 }
+
+module.exports = { HBAClient };
