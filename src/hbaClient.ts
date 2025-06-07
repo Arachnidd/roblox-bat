@@ -1,3 +1,4 @@
+import https from "https";
 import {
     AUTH_TOKEN_SEPARATOR,
     BAT_SIGNATURE_VERSION,
@@ -40,6 +41,10 @@ export type HBAClientConstProps = {
      * HBA url configs.
      */
     urls?: Partial<HBAUrlConfig>;
+    /**
+     * Local address to bind internal fetch requests to.
+     */
+    localAddress?: string;
 };
 
 export type APISiteWhitelistItem = {
@@ -99,6 +104,7 @@ export class HBAClient {
         matchRobloxBaseUrl: DEFAULT_MATCH_ROBLOX_URL_BASE,
         forceBATUrls: DEFAULT_FORCE_BAT_URLS,
     };
+    public localAddress?: string;
 
     /**
      * General fetch wrapper for the client. Not for general public use.
@@ -121,6 +127,9 @@ export class HBAClient {
             ...params,
             headers,
         };
+        if (this.localAddress && !init.agent) {
+            init.agent = new https.Agent({ keepAlive: true, localAddress: this.localAddress });
+        }
         if (this.onSite) {
             // @ts-ignore: just incase ts is annoying
             init.credentials = "include";
@@ -293,10 +302,6 @@ export class HBAClient {
         return promise;
     }
 
-    /**
-     * Fetch the public-private crypto key pair from the indexed DB store.
-     * @param uncached - Whether it should fetch uncached.
-     */
     public async getCryptoKeyPair(uncached?: boolean): Promise<CryptoKeyPair | null> {
         if (this.suppliedCryptoKeyPair) {
             return this.suppliedCryptoKeyPair;
@@ -333,12 +338,6 @@ export class HBAClient {
         return promise;
     }
 
-    /**
-     * Generate the bound auth token given a body.
-     * @param requestUrl - The request URL
-     * @param requestMethod  - The request method
-     * @param body - The request body. If the method does not support a body, leave it undefined.
-     */
     public async generateBAT(
         requestUrl: string | URL,
         requestMethod: string = "GET",
@@ -372,10 +371,6 @@ export class HBAClient {
         );
     }
 
-    /**
-     * Check whether the URL is supported for bound auth tokens.
-     * @param url - The target URL.
-     */
     public async isUrlIncludedInWhitelist(
         tryUrl: string | URL,
         includeCredentials?: boolean,
@@ -408,46 +403,5 @@ export class HBAClient {
             )
         ) &&
             !metadata.boundAuthTokenExemptlist?.some((item) => url.includes(item.apiSite));
-    }
-
-    public constructor({
-        fetch,
-        headers,
-        onSite,
-        keys,
-        urls,
-        cookie,
-    }: HBAClientConstProps = {}) {
-        if (fetch) {
-            this._fetchFn = fetch;
-        }
-        if (headers) {
-            // @ts-ignore: fine
-            this.headers = headers instanceof Headers
-                ? Object.fromEntries(headers.entries())
-                : headers;
-        }
-
-        if (urls) {
-            for (const key in urls) {
-                // @ts-ignore: Fine. Type assertions are annoying.
-                this.urls[key] = urls[key];
-            }
-        }
-
-        if (onSite) {
-            this.onSite = onSite;
-            if (globalThis?.location?.href && !urls?.currentUrl) {
-                this.urls.currentUrl = globalThis.location.href;
-            }
-        }
-
-        if (keys) {
-            this.suppliedCryptoKeyPair = keys;
-        }
-
-        if (cookie) {
-            this.cookie = cookie;
-        }
     }
 }
