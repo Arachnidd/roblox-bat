@@ -1,0 +1,6 @@
+{
+  "name": "roblox-bat",
+  "version": "1.0.0",
+  "main": "dist/hbaClient.js",
+  "type": "commonjs"
+}
